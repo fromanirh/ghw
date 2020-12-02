@@ -84,7 +84,7 @@ func distancesForNode(ctx *context.Context, nodeID int) ([]int, error) {
 	path := filepath.Join(
 		paths.SysDevicesSystemNode,
 		fmt.Sprintf("node%d", nodeID),
-		"distances",
+		"distance",
 	)
 
 	data, err := ioutil.ReadFile(path)
@@ -92,8 +92,9 @@ func distancesForNode(ctx *context.Context, nodeID int) ([]int, error) {
 		return nil, err
 	}
 
-	dists := []int{}
-	for idx, item := range strings.Split(strings.TrimSpace(string(data)), distanceSeparator) {
+	items := strings.Split(strings.TrimSpace(string(data)), distanceSeparator)
+	dists := make([]int, len(items), len(items)) // TODO: can a NUMA cell be offlined?
+	for idx, item := range items {
 		dist, err := strconv.Atoi(item)
 		if err != nil {
 			return dists, err
