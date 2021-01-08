@@ -10,7 +10,6 @@ import (
 	"bytes"
 	"fmt"
 	"regexp"
-	"strings"
 
 	"github.com/jaypipes/pcidb"
 
@@ -134,38 +133,6 @@ type Info struct {
 	Vendors map[string]*pcidb.Vendor
 	// hash of vendor ID + product/device ID -> product information
 	Products map[string]*pcidb.Product
-}
-
-type Address struct {
-	Domain   string
-	Bus      string
-	Slot     string
-	Function string
-}
-
-// Given a string address, returns a complete Address struct, filled in with
-// domain, bus, slot and function components. The address string may either
-// be in $BUS:$SLOT.$FUNCTION (BSF) format or it can be a full PCI address
-// that includes the 4-digit $DOMAIN information as well:
-// $DOMAIN:$BUS:$SLOT.$FUNCTION.
-//
-// Returns "" if the address string wasn't a valid PCI address.
-func AddressFromString(address string) *Address {
-	addrLowered := strings.ToLower(address)
-	matches := regexAddress.FindStringSubmatch(addrLowered)
-	if len(matches) == 6 {
-		dom := "0000"
-		if matches[1] != "" {
-			dom = matches[2]
-		}
-		return &Address{
-			Domain:   dom,
-			Bus:      matches[3],
-			Slot:     matches[4],
-			Function: matches[5],
-		}
-	}
-	return nil
 }
 
 // New returns a pointer to an Info struct that contains information about the

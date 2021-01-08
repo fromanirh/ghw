@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	pciaddr "github.com/jaypipes/ghw/pkg/pci/address"
 )
 
 func CloneTreeInto(scratchDir string) error {
@@ -21,6 +23,8 @@ func CloneTreeInto(scratchDir string) error {
 		"proc",
 		"etc",
 		"sys/block",
+		"sys/bus/pci/devices",
+		"sys/devices",
 		"sys/devices/system/cpu",
 		"sys/devices/system/memory",
 		"sys/devices/system/node",
@@ -47,7 +51,12 @@ func CloneTreeInto(scratchDir string) error {
 	if err = createSysDevicesSystemNode(scratchDir); err != nil {
 		return err
 	}
-
+	if err = createSysDevicesPCI(scratchDir); err != nil {
+		return err
+	}
+	if err = createSysBusPCIDevices(scratchDir); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -78,7 +87,7 @@ func copyPseudoFile(path, targetPath string) error {
 	if err != nil {
 		return err
 	}
-	trace("creating %s\n", targetPath)
+	trace("creating %q\n", targetPath)
 	f, err := os.Create(targetPath)
 	if err != nil {
 		return err
@@ -122,7 +131,7 @@ func createBlockDevices(buildDir string) error {
 			"sys/block",
 			strings.TrimPrefix(linkContentPath, string(os.PathSeparator)),
 		)
-		trace("creating device directory %s\n", linkTargetPath)
+		trace("creating device directory %q\n", linkTargetPath)
 		if err = os.MkdirAll(linkTargetPath, os.ModePerm); err != nil {
 			return err
 		}
@@ -181,7 +190,7 @@ func createBlockDeviceDir(buildDeviceDir string, srcDeviceDir string) error {
 				srcPartitionDir := filepath.Join(
 					srcDeviceDir, fname,
 				)
-				trace("creating partition directory %s\n", buildPartitionDir)
+				trace("creating partition directory %q\n", buildPartitionDir)
 				err = os.MkdirAll(buildPartitionDir, os.ModePerm)
 				if err != nil {
 					return err
@@ -200,7 +209,7 @@ func createBlockDeviceDir(buildDeviceDir string, srcDeviceDir string) error {
 				return err
 			}
 			targetPath := filepath.Join(buildDeviceDir, fname)
-			trace("creating %s\n", targetPath)
+			trace("creating %q\n", targetPath)
 			f, err := os.Create(targetPath)
 			if err != nil {
 				return err
@@ -232,7 +241,7 @@ func createBlockDeviceDir(buildDeviceDir string, srcDeviceDir string) error {
 		return err
 	}
 	targetPath := filepath.Join(buildQueueDir, "rotational")
-	trace("creating %s\n", targetPath)
+	trace("creating %q\n", targetPath)
 	f, err := os.Create(targetPath)
 	if err != nil {
 		return err
@@ -277,7 +286,7 @@ func createPartitionDir(buildPartitionDir string, srcPartitionDir string) error 
 				return err
 			}
 			targetPath := filepath.Join(buildPartitionDir, fname)
-			trace("creating %s\n", targetPath)
+			trace("creating %q\n", targetPath)
 			f, err := os.Create(targetPath)
 			if err != nil {
 				return err
@@ -315,7 +324,7 @@ func createSysDevicesSystemCPU(buildDir string) error {
 			continue
 		}
 
-		trace("creating %s\n", cname)
+		trace("creating %q\n", cname)
 		cpuTopoDir := filepath.Join(devSysCPU, cpuEntry.Name(), "topology")
 		if err = os.MkdirAll(filepath.Join(buildDir, cpuTopoDir), os.ModePerm); err != nil {
 			return err
@@ -355,7 +364,7 @@ func createSysDevicesSystemCPU(buildDir string) error {
 				continue
 			}
 
-			trace("creating %s\n", ccname)
+			trace("creating %q\n", ccname)
 			cpuCacheEntryDir := filepath.Join(cpuCacheDir, ccname)
 
 			if err := os.MkdirAll(filepath.Join(buildDir, cpuCacheEntryDir), os.ModePerm); err != nil {
@@ -405,7 +414,7 @@ func createSysDevicesSystemMemory(buildDir string) error {
 			continue
 		}
 
-		trace("creating %s\n", mname)
+		trace("creating %q\n", mname)
 		if err := os.MkdirAll(filepath.Join(buildDir, devSysMemory, mname), os.ModePerm); err != nil {
 			return err
 		}
@@ -446,7 +455,7 @@ func createSysDevicesSystemNode(buildDir string) error {
 			continue
 		}
 
-		trace("creating %s\n", nname)
+		trace("creating %q\n", nname)
 		if err := os.MkdirAll(filepath.Join(buildDir, devSysNode, nname), os.ModePerm); err != nil {
 			return err
 		}
@@ -470,7 +479,7 @@ func createSysDevicesSystemNode(buildDir string) error {
 				continue
 			}
 
-			trace("creating %s\n", pnname)
+			trace("creating %q\n", pnname)
 			// from sysfs layout, we know already we know these are symlinks
 			target, err := os.Readlink(filepath.Join(devSysNodeNodeX, pnname))
 			if err != nil {
@@ -480,6 +489,113 @@ func createSysDevicesSystemNode(buildDir string) error {
 			if err := os.Symlink(target, filepath.Join(buildDir, devSysNodeNodeX, pnname)); err != nil {
 				return err
 			}
+		}
+	}
+	return nil
+}
+
+func isPCIAddress(s string) bool {
+	return pciaddr.FromString(s) != nil
+}
+
+func createSysDevicesPCI(buildDir string) error {
+	sysDevPath := "/sys/devices"
+
+	sysDevEntries, err := ioutil.ReadDir(sysDevPath)
+	if err != nil {
+		return err
+	}
+
+	for _, sysDevEntry := range sysDevEntries {
+		dname := sysDevEntry.Name()
+		if !strings.HasPrefix(dname, "pci") {
+			continue
+		}
+
+		sysDevPCIBus := filepath.Join(sysDevPath, dname)
+		trace("creating %q\n", sysDevPCIBus)
+
+		if err := os.MkdirAll(filepath.Join(buildDir, sysDevPCIBus), os.ModePerm); err != nil {
+			return err
+		}
+
+		perBusEntries, err := ioutil.ReadDir(sysDevPCIBus)
+		if err != nil {
+			return err
+		}
+
+		for _, perBusEntry := range perBusEntries {
+			pbname := perBusEntry.Name()
+			if !isPCIAddress(pbname) {
+				continue
+			}
+
+			trace("creating %q\n", pbname)
+			if err := os.MkdirAll(filepath.Join(buildDir, sysDevPCIBus, pbname), os.ModePerm); err != nil {
+				return err
+			}
+
+			if err := copyPseudoFiles(buildDir, filepath.Join(sysDevPCIBus, pbname), []string{"local_cpulist", "modalias"}); err != nil {
+				return err
+			}
+		}
+
+		sysDevPCIBusMeta := filepath.Join(sysDevPCIBus, "pci_bus")
+		metaEntries, err := ioutil.ReadDir(sysDevPCIBusMeta)
+		if err != nil {
+			return err
+		}
+
+		for _, metaEntry := range metaEntries {
+			mname := metaEntry.Name()
+
+			sysDevPCIBusMetaBus := filepath.Join(sysDevPCIBusMeta, mname)
+			trace("creating %q\n", sysDevPCIBusMetaBus)
+
+			if err := os.MkdirAll(filepath.Join(buildDir, sysDevPCIBusMetaBus), os.ModePerm); err != nil {
+				return err
+			}
+
+			if err := copyPseudoFiles(buildDir, sysDevPCIBusMetaBus, []string{"cpulistaffinity"}); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func createSysBusPCIDevices(buildDir string) error {
+	sysBusPciDevPath := "/sys/bus/pci/devices"
+
+	sysBusPciDevEntries, err := ioutil.ReadDir(sysBusPciDevPath)
+	if err != nil {
+		return err
+	}
+
+	for _, sysBusPciDevEntry := range sysBusPciDevEntries {
+		pdname := sysBusPciDevEntry.Name()
+		pciDevPath := filepath.Join(sysBusPciDevPath, pdname)
+		trace("creating %q\n", pciDevPath)
+
+		// from sysfs layout, we know already we know these are symlinks
+		target, err := os.Readlink(pciDevPath)
+		if err != nil {
+			return err
+		}
+
+		if err := os.Symlink(target, filepath.Join(buildDir, pciDevPath)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func copyPseudoFiles(buildDir, srcPath string, names []string) error {
+	for _, pseudoFile := range names {
+		path := filepath.Join(srcPath, pseudoFile)
+		if err := copyPseudoFile(path, filepath.Join(buildDir, path)); err != nil {
+			return err
 		}
 	}
 	return nil

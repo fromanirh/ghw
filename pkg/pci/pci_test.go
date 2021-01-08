@@ -8,62 +8,10 @@ package pci_test
 
 import (
 	"os"
-	"reflect"
 	"testing"
 
 	"github.com/jaypipes/ghw/pkg/pci"
 )
-
-func TestPCIAddressFromString(t *testing.T) {
-
-	tests := []struct {
-		addrStr  string
-		expected *pci.Address
-	}{
-		{
-			addrStr: "00:00.0",
-			expected: &pci.Address{
-				Domain:   "0000",
-				Bus:      "00",
-				Slot:     "00",
-				Function: "0",
-			},
-		},
-		{
-			addrStr: "0000:00:00.0",
-			expected: &pci.Address{
-				Domain:   "0000",
-				Bus:      "00",
-				Slot:     "00",
-				Function: "0",
-			},
-		},
-		{
-			addrStr: "0000:03:00.0",
-			expected: &pci.Address{
-				Domain:   "0000",
-				Bus:      "03",
-				Slot:     "00",
-				Function: "0",
-			},
-		},
-		{
-			addrStr: "0000:03:00.A",
-			expected: &pci.Address{
-				Domain:   "0000",
-				Bus:      "03",
-				Slot:     "00",
-				Function: "a",
-			},
-		},
-	}
-	for x, test := range tests {
-		got := pci.AddressFromString(test.addrStr)
-		if !reflect.DeepEqual(got, test.expected) {
-			t.Fatalf("Test #%d failed. Expected %v but got %v", x, test.expected, got)
-		}
-	}
-}
 
 func TestPCI(t *testing.T) {
 	if _, ok := os.LookupEnv("GHW_TESTING_SKIP_PCI"); ok {

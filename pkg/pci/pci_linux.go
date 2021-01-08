@@ -16,6 +16,7 @@ import (
 
 	"github.com/jaypipes/ghw/pkg/context"
 	"github.com/jaypipes/ghw/pkg/linuxpath"
+	pciaddr "github.com/jaypipes/ghw/pkg/pci/address"
 	"github.com/jaypipes/ghw/pkg/util"
 )
 
@@ -32,7 +33,7 @@ func (i *Info) load() error {
 
 func getDeviceModaliasPath(ctx *context.Context, address string) string {
 	paths := linuxpath.New(ctx)
-	pciAddr := AddressFromString(address)
+	pciAddr := pciaddr.FromString(address)
 	if pciAddr == nil {
 		return ""
 	}
