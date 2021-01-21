@@ -20,13 +20,17 @@ type NICCapability struct {
 	CanEnable bool   `json:"can_enable"`
 }
 
+type NICAddress struct {
+	PCI string `json:"pci"`
+	// TODO(fromani): add other hw addresses (USB) when we support them
+}
+
 type NIC struct {
 	Name         string           `json:"name"`
 	MacAddress   string           `json:"mac_address"`
 	IsVirtual    bool             `json:"is_virtual"`
 	Capabilities []*NICCapability `json:"capabilities"`
-	// TODO(jaypipes): Add PCI field for accessing PCI device information
-	// PCI *PCIDevice `json:"pci"`
+	HWAddress    NICAddress       `json:"hw_address"`
 }
 
 func (n *NIC) String() string {
