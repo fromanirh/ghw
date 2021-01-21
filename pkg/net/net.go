@@ -20,6 +20,11 @@ type NICCapability struct {
 	CanEnable bool   `json:"can_enable"`
 }
 
+type NICAddress struct {
+	PCI string `json:"pci"`
+	// TODO(fromani): add other hw addresses (USB) when we support them
+}
+
 type NIC struct {
 	Name         string           `json:"name"`
 	MacAddress   string           `json:"mac_address"`
