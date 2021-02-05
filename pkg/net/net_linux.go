@@ -13,10 +13,12 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/jaypipes/ghw/pkg/context"
 	"github.com/jaypipes/ghw/pkg/linuxpath"
+	"github.com/jaypipes/ghw/pkg/util"
 )
 
 const (
@@ -73,6 +75,7 @@ func nics(ctx *context.Context) []*NIC {
 		}
 
 		nic.PCIAddress = netDevicePCIAddress(paths.SysClassNet, filename)
+		nic.SRIOVInfo = netDeviceSriovInfo(ctx, netPath)
 
 		nics = append(nics, nic)
 	}
@@ -219,4 +222,44 @@ func netDevicePCIAddress(netDevDir, netDevName string) *string {
 
 	pciAddr := filepath.Base(devPath)
 	return &pciAddr
+}
+
+func netDeviceSriovInfo(ctx *context.Context, devPath string) *NICSRIOVInfo {
+	if dest, err := os.Readlink(filepath.Join(devPath, "device", "physfn")); err == nil {
+		// it's a virtual function!
+		return &NICSRIOVInfo{
+			PhysicalFunctionAddress: filepath.Base(dest),
+		}
+	}
+	// it's either a physical function or a non-SRIOV device
+	if buf, err := ioutil.ReadFile(filepath.Join(devPath, "device", "sriov_totalvfs")); err == nil {
+		// it seems a physical function
+		contents := strings.TrimSpace(string(buf))
+		res, err := strconv.Atoi(contents)
+		if err != nil {
+			ctx.Warn("error reading sriov_totalvfn for %q: %v", err)
+			return nil
+		}
+
+		info := NICSRIOVInfo{
+			MaxVirtualFunctions: res,
+		}
+
+		numVfs := util.SafeIntFromFile(ctx, filepath.Join(devPath, "device", "sriov_numvfs"))
+		if numVfs == -1 {
+			return nil
+		}
+		for vfnIdx := 0; vfnIdx < numVfs; vfnIdx++ {
+			virtFn := fmt.Sprintf("virtfn%d", vfnIdx)
+			vfnDest, err := os.Readlink(filepath.Join(devPath, "device", virtFn))
+			if err != nil {
+				ctx.Warn("error reading backing device for virtfn %q physfn %q: %v", virtFn, devPath, err)
+				return nil
+			}
+			info.VirtualFunctionAddresses = append(info.VirtualFunctionAddresses, filepath.Base(vfnDest))
+		}
+		return &info
+	}
+	// not a SRIOV device
+	return nil
 }

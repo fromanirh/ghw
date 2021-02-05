@@ -14,6 +14,20 @@ import (
 	"github.com/jaypipes/ghw/pkg/option"
 )
 
+type NICSRIOVInfo struct {
+	PhysicalFunctionAddress  string   `json:"phys_fn_address,omitempty"`
+	MaxVirtualFunctions      int      `json:"phys_max_vfs,omitempty"`
+	VirtualFunctionAddresses []string `json:"virt_fn_addresses,omitempty"`
+}
+
+func (sriov *NICSRIOVInfo) IsPhysicalFunction() bool {
+	return sriov != nil && (sriov.MaxVirtualFunctions > 0) && (sriov.PhysicalFunctionAddress == "")
+}
+
+func (sriov *NICSRIOVInfo) IsVirtualFunction() bool {
+	return sriov != nil && (sriov.MaxVirtualFunctions == 0) && (sriov.PhysicalFunctionAddress != "")
+}
+
 type NICCapability struct {
 	Name      string `json:"name"`
 	IsEnabled bool   `json:"is_enabled"`
@@ -32,6 +46,7 @@ type NIC struct {
 	Capabilities []*NICCapability `json:"capabilities"`
 	PCIAddress   *string          `json:"pci_address,omitempty"`
 	// TODO(fromani): add other hw addresses (USB) when we support them
+	SRIOVInfo *NICSRIOVInfo `json:"sriov,omitempty"`
 }
 
 func (n *NIC) String() string {

@@ -23,6 +23,15 @@ func NetIfacesCloneContent() []string {
 		"addr_assign_type",
 		// intentionally avoid to clone "address" to avoid to leak any host-idenfifiable data.
 	}
+
+	// some files are created only if the network interface is of given type (e.g. SRIOV).
+	// so we need to list only what's there
+	ifaceOptionalEntries := []string{
+		// we know we are on linux, so we hardcode the path separator
+		"device/physfn",
+		"device/sriov_*",
+		"device/virtfn*",
+	}
 	entries, err := ioutil.ReadDir(sysClassNet)
 	if err != nil {
 		// we should not import context, hence we can't Warn()
@@ -37,7 +46,7 @@ func NetIfacesCloneContent() []string {
 		}
 		if strings.Contains(dest, "devices/virtual/net") {
 			// there is no point in cloning data for virtual devices,
-			// becahse ghw concerns itself with HardWare.
+			// because ghw concerns itself with HardWare.
 			continue
 		}
 
@@ -52,6 +61,12 @@ func NetIfacesCloneContent() []string {
 			fileSpecs = append(fileSpecs, filepath.Join(netIface, ifaceEntry))
 		}
 
+		for _, ifaceOptionalEntry := range ifaceOptionalEntries {
+			netIfaceOptEntry := filepath.Join(netIface, ifaceOptionalEntry)
+			if matches, err := filepath.Glob(netIfaceOptEntry); len(matches) > 0 && err == nil {
+				fileSpecs = append(fileSpecs, netIfaceOptEntry)
+			}
+		}
 	}
 
 	return fileSpecs
