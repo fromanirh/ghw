@@ -17,6 +17,7 @@ const (
 	defaultChroot           = "/"
 	envKeyChroot            = "GHW_CHROOT"
 	envKeyDisableWarnings   = "GHW_DISABLE_WARNINGS"
+	envKeyDisableTools      = "GHW_DISABLE_TOOLS"
 	envKeySnapshotPath      = "GHW_SNAPSHOT_PATH"
 	envKeySnapshotRoot      = "GHW_SNAPSHOT_ROOT"
 	envKeySnapshotExclusive = "GHW_SNAPSHOT_EXCLUSIVE"
@@ -95,6 +96,14 @@ func EnvOrDefaultSnapshotPreserve() bool {
 	return false
 }
 
+// TODO
+func EnvOrDefaultTools() bool {
+	if _, exists := os.LookupEnv(envKeyDisableTools); exists {
+		return false
+	}
+	return true
+}
+
 // Option is used to represent optionally-configured settings. Each field is a
 // pointer to some concrete value so that we can tell when something has been
 // set or left unset.
@@ -113,6 +122,9 @@ type Option struct {
 
 	// Alerter contains the target for ghw warnings
 	Alerter Alerter
+
+	// TODO
+	EnableTools *bool
 }
 
 // SnapshotOptions contains options for handling of ghw snapshots
@@ -161,6 +173,12 @@ func WithNullAlerter() *Option {
 	}
 }
 
+// TODO
+func WithDisableTools() *Option {
+	false_ := false
+	return &Option{EnableTools: &false_}
+}
+
 // There is intentionally no Option related to GHW_SNAPSHOT_PRESERVE because we see that as
 // a debug/troubleshoot aid more something users wants to do regularly.
 // Hence we allow that only via the environment variable for the time being.
@@ -176,6 +194,9 @@ func Merge(opts ...*Option) *Option {
 		}
 		if opt.Alerter != nil {
 			merged.Alerter = opt.Alerter
+		}
+		if opt.EnableTools != nil {
+			merged.EnableTools = opt.EnableTools
 		}
 	}
 	// Set the default value if missing from mergeOpts
@@ -193,6 +214,10 @@ func Merge(opts ...*Option) *Option {
 			Root:      &snapRoot,
 			Exclusive: EnvOrDefaultSnapshotExclusive(),
 		}
+	}
+	if merged.EnableTools == nil {
+		enabled := EnvOrDefaultTools()
+		merged.EnableTools = &enabled
 	}
 	return merged
 }
