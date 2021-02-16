@@ -49,7 +49,15 @@ func CloneTreeInto(scratchDir string) error {
 // Beware: the content is host-specific, because the content pertaining some subsystems,
 // most notably PCI, is host-specific and unpredictable.
 func ExpectedCloneContent() []string {
-	fileSpecs := []string{
+	fileSpecs := ExpectedCloneGeneralContent()
+	fileSpecs = append(fileSpecs, NetIfacesCloneContent()...)
+	fileSpecs = append(fileSpecs, PCIDevicesCloneContent()...)
+	return fileSpecs
+}
+
+// TODO
+func ExpectedCloneGeneralContent() []string {
+	return []string{
 		"/etc/mtab",
 		"/proc/cpuinfo",
 		"/proc/meminfo",
@@ -64,8 +72,6 @@ func ExpectedCloneContent() []string {
 		"/sys/devices/system/node/node*/cpu*",
 		"/sys/devices/system/node/node*/distance",
 	}
-	fileSpecs = append(fileSpecs, PCIDevicesCloneContent()...)
-	return fileSpecs
 }
 
 // ValidateClonedTree checks the content of a cloned tree, whose root is `clonedDir`,
