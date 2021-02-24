@@ -7,6 +7,7 @@
 package snapshot
 
 import (
+	"errors"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -197,6 +198,11 @@ func copyLink(path, targetPath string) error {
 		return err
 	}
 	if err := os.Symlink(target, targetPath); err != nil {
+		// multiple sources can link back to the same entry: a notable example is
+		// all the SRIOV VFs linking back to the same driver.
+		if errors.Is(err, os.ErrExist) {
+			return nil
+		}
 		return err
 	}
 

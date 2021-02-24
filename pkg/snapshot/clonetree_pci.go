@@ -67,6 +67,15 @@ func scanPCIDeviceRoot(root string) (fileSpecs []string, pciRoots []string) {
 		"revision",
 		"vendor",
 	}
+
+	perDevEntriesOpt := []string{
+		"driver",
+		"net/*",
+		"physfn",
+		"sriov_*",
+		"virtfn*",
+	}
+
 	entries, err := ioutil.ReadDir(root)
 	if err != nil {
 		return []string{}, []string{}
@@ -91,6 +100,14 @@ func scanPCIDeviceRoot(root string) (fileSpecs []string, pciRoots []string) {
 		fileSpecs = append(fileSpecs, entryPath)
 		for _, perNetEntry := range perDevEntries {
 			fileSpecs = append(fileSpecs, filepath.Join(pciEntry, perNetEntry))
+		}
+
+		for _, perNetEntryOpt := range perDevEntriesOpt {
+			netEntryOptPath := filepath.Join(pciEntry, perNetEntryOpt)
+			if items, err := filepath.Glob(netEntryOptPath); err == nil && len(items) > 0 {
+				fileSpecs = append(fileSpecs, netEntryOptPath)
+			}
+
 		}
 
 		if isPCIBridge(entryPath) {
