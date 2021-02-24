@@ -1039,6 +1039,49 @@ information
 `ghw.TopologyNode` struct if you'd like to dig deeper into the NUMA/topology
 subsystem
 
+### SRIOV
+
+*This API is PROVISIONAL! ghw will try hard to not make breaking changes to this API, but still users are advice this new API is not
+declared stable yet. We expect to declare it stable with ghw version 1.0.0*
+
+SRIOV (Single-Root Input/Output Virtualization) is a class of PCI devices that ghw models explicitly, like gpus; but unlike
+gpus, support for sriov devices is part of the `pci` package.
+
+To get the SRIOV-specific information of a given PCI device, you may use the `GetSRIOVInfo` function like in the example below:
+
+```go
+package main
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+
+	"github.com/jaypipes/ghw"
+)
+
+func main() {
+	pci, err := ghw.PCI()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error getting PCI info: %v", err)
+	}
+
+	addr := "0000:00:00.0"
+	if len(os.Args) == 2 {
+		addr = os.Args[1]
+	}
+	sriovInfo := pci.GetSRIOVInfo(addr)
+	if sriovInfo == nil {
+		fmt.Fprintf(os.Stderr, "could not retrieve SRIOV device information for %s\n", addr)
+		return
+	}
+
+	json.NewEncoder(os.Stdout).Encode(sriovInfo)
+}
+```
+
+If the function returns `nil`, then the device is not recognized as a SRIOV device.
+
 ### Chassis
 
 The host's chassis information is accessible with the `ghw.Chassis()` function.  This

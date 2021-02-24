@@ -294,6 +294,13 @@ func (info *Info) GetDevice(address string) *Device {
 	return device
 }
 
+// GetSRIOVInfo returns a pointer to a SRIOV struct that describes the SRIOV attributes of
+// the PCI device at the requested address. If no such device could be found, or if the
+// device exists but it is not recognized as SRIOV device, returns nil
+func (info *Info) GetSRIOVInfo(address string) *SRIOVInfo {
+	return getDeviceSriovInfo(info.ctx, address)
+}
+
 // ParseDevice returns a pointer to a Device given its describing data.
 // The PCI device obtained this way may not exist in the system;
 // use GetDevice to get a *Device which is found in the system

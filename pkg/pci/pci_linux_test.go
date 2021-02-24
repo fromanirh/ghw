@@ -22,6 +22,7 @@ type pciTestCase struct {
 	addr     string
 	node     int
 	revision string
+	isSRIOV  bool
 }
 
 // nolint: gocyclo
