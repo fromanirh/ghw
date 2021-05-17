@@ -210,6 +210,13 @@ func diskPartitions(ctx *context.Context, paths *linuxpath.Paths, disk string) [
 }
 
 func diskPartUUID(ctx *context.Context, part string) string {
+	if !ctx.EnableTools {
+		// intentionally not using ctx.Warn because
+		// 1. we want to avoid excessive message flow
+		// 2. this is an explicit setting, which client code
+		//    must be prepared to handle.
+		return ""
+	}
 	if !strings.HasPrefix(part, "/dev") {
 		part = "/dev/" + part
 	}
