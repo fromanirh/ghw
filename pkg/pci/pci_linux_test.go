@@ -107,6 +107,22 @@ func TestPCIMarshalJSON(t *testing.T) {
 	}
 }
 
+// the sriov-device-plugin code has a test like this
+func TestPCIMalformedModalias(t *testing.T) {
+	if _, ok := os.LookupEnv("GHW_TESTING_SKIP_PCI"); ok {
+		t.Skip("Skipping PCI tests.")
+	}
+	info, err := pci.New()
+	if err != nil {
+		t.Fatalf("Expected no error creating PciInfo, but got %v", err)
+	}
+
+	dev := info.ParseDevice("0000:00:01.0", "pci:junk")
+	if dev != nil {
+		t.Fatalf("Parsed succesfully junk data")
+	}
+}
+
 func pciTestSetup(t *testing.T) *pci.Info {
 	if _, ok := os.LookupEnv("GHW_TESTING_SKIP_PCI"); ok {
 		t.Skip("Skipping PCI tests.")
